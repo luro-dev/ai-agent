@@ -1,10 +1,10 @@
 import os
-from dotenv import load_dotenvi
+from dotenv import load_dotenv
 from google import genai
 
 def main():
     # Loading variables from .env,
-    load_dotenvi()
+    load_dotenv()
     api_key = os.environ.get("GEMINI_API_KEY")
 
     # Creating new instance of Gemini client
@@ -17,7 +17,9 @@ def main():
         contents=content
     )
 
+    # Printing the prompt response and token usage 
     print(response.text)
+    print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}\n Response tokens: {reponse.usage_metadata.candidates_token_count}")
 
 
 if __name__ == "__main__":
