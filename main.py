@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from llm_schemas import *
+from functions.call_function import call_function
 
 def main():
     # Loading variables from .env,
@@ -49,23 +50,37 @@ def main():
     
 
     # Getting response from client
-    response = client.models.generate_content(
-        model="gemini-2.0-flash-001",
-        contents=messages,
-        config=types.GenerateContentConfig(
-            tools=[available_functions],
-            system_instruction=system_prompt),
-    )
-    
-    # Handle verbose flag --verbose (give more info)
-    if "--verbose" in sys.argv:
-        print(f"User prompt: {user_prompt}\nPrompt tokens: {response.usage_metadata.prompt_token_count}\nResponse tokens: {response.usage_metadata.candidates_token_count}")
-    elif response.function_calls:
-        for func in response.function_calls:
-            print(f"Calling function: {func.name}({func.args})")
-    else:
-        print(response.text)
-        
+     
+    for i in range(0, 20):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.0-flash-001",
+                contents=messages,
+                config=types.GenerateContentConfig(
+                    tools=[available_functions],
+                    system_instruction=system_prompt),
+            )
+
+            for res in response.candidates:
+                messages.append(res.content)
+
+            if not response.function_calls:
+                print(response.text)
+                break
+
+            for func in response.function_calls:
+                verbose = True if "--verbose" in sys.argv else False
+                types_content = call_function(func, verbose)
+                messages.append(types_content)
+
+                if not types_content.parts or not types_content.parts[0].function_response:
+                    raise Exception("empty function call result")
+
+                response_data = types_content.parts[0].function_response.response
+                if verbose:
+                    print(f"-> {response_data}")
+        except Exception as e:
+            print(f"Error: {str(e)}")
 
 if __name__ == "__main__":
     main()
